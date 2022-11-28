@@ -3,10 +3,10 @@ const ejs = require("ejs")
 const bodyParser = require("body-parser")
 const express = require("express");
 const mongoose = require("mongoose")
-const md5 = require("md5")
+const bcrypt = require("bcrypt")
 const encrypt = require("mongoose-encryption")
 const app = express()
-
+const saltRounds =10
 app.set("view engine", "ejs")
 app.use(express.static("public"))
 
@@ -31,19 +31,29 @@ app.get("/login",function(req,res){
 })
 app.post("/login",function(req,res){
     const username = req.body.username
-    const password = md5(req.body.password)
-    User.findOne({email:username},function(err,foundUser){
-        if(!err){
-            if(foundUser) {
-                if(foundUser.password === password){
-                    res.render("secrets");
-                }
-            }
+    const password = req.body.password
+    
+        User.findOne({email:username},function(err,foundUser){
+            if(!err){
+                if(foundUser) {
+                    bcrypt.compare(password,foundUser.password,function(err,result){
 
-        }else{
-            console.log(err)
-        }
-    })
+                        if (result === true){
+                            res.render("secrets")
+                        }
+                        
+                    })
+                        
+                    
+                }
+    
+            }else{
+                console.log(err)
+            }
+        })
+
+    
+    
     })
 
 app.get("/register",function(req,res){
@@ -51,19 +61,22 @@ app.get("/register",function(req,res){
 })
 
 app.post("/register",function(req,res){
+    bcrypt.hash(req.body.password,saltRounds,function(err,hash){
+        const user = new User({
+            email: req.body.username,
+            password : hash
     
-    const user = new User({
-        email: req.body.username,
-        password :md5( req.body.password)
-
+        })
+        user.save(function(err){
+            if(!err){
+                res.render("secrets")
+            }else{
+                console.log(err)
+            }
+        });
     })
-    user.save(function(err){
-        if(!err){
-            res.render("secrets")
-        }else{
-            console.log(err)
-        }
-    });
+    
+    
     
 })
 
